@@ -5,12 +5,45 @@ import numpy as np
 import time
 import yfinance as yf
 import matplotlib.pyplot as plt
+import os
+import sqlite3
 
-def get_intra_data(symbol,n):
-    data = yf.download(tickers=symbol, interval="5m", period=f"{n}d", end=dt.datetime.now())
-    data.index = data.index.tz_localize(None)
-    data.drop(["Adj Close", 'Volume'], axis=1, inplace=True)
-    return data
+dbd = r'F:\Database\5min_data'
+#Connecting to Database
+db = sqlite3.connect(os.path.join(dbd,"NSEEQ.db"))
+
+
+def get_intra_data(symbol):
+    symbol_check = {'3MINDIA': 'MINDIA',
+                    'BAJAJ-AUTO': 'BAJAJAUTO',
+                    'J&KBANK': 'JKBANK',
+                    'L&TFH': 'LTFH',
+                    'M&MFIN': 'MMFIN',
+                    'M&M': 'MM',
+                    'NAM-INDIA': 'NAMINDIA',
+                    'MCDOWELL-N': 'MCDOWELLN'}
+    symbol = symbol[:-3]
+    if symbol in list(symbol_check.keys()):
+        symbol = symbol_check[symbol]
+
+    df = pd.read_sql('''SELECT * FROM %s;''' % symbol, con=db)
+    df.set_index('time', inplace=True)
+    df.reset_index(inplace=True)
+    df['time'] = pd.to_datetime(df['time'])
+    df.set_index("time", drop=True, inplace=True)
+    df.index[0]
+    df.drop(["oi", 'Volume'], axis=1, inplace=True)
+    df = df[df.index.date >= dt.datetime(2020, 11, 1, 0, 0).date()]
+    return df
+
+# def get_intra_data(symbol):
+#     daily = yf.download(tickers=symbol,  interval="5m", period="4d")
+#     daily.index = daily.index.tz_localize(None)
+#     daily.drop(["Adj Close", 'Volume'], axis=1, inplace=True)
+#     daily["pre_close"] = daily['Close'].shift(1)
+#     daily["pre_low"] = daily['Low'].shift(1)
+#     daily["pre_high"] = daily['High'].shift(1)
+#     return daily
 
 
 def atr(DF,n):
@@ -84,61 +117,24 @@ def sl_price(ohlc,e):
         sl = st.mean()
     return round(sl,1)
 
+def get_para():
+    df = pd.read_csv('Nifty50.csv', header=0, index_col=0)
+    return df
 
 
-tickers = ['GUJGASLTD.NS', 'ADANITRANS.NS', 'CONCOR.NS', 'M&M.NS',
-       'DALBHARAT.NS', 'RAMCOCEM.NS', 'TATAMOTORS.NS', 'HINDALCO.NS',
-       'EXIDEIND.NS', 'ADANIENT.NS', 'AUBANK.NS', 'NAUKRI.NS', 'SAIL.NS',
-       'SHREECEM.NS', 'MOTHERSUMI.NS', 'COFORGE.NS', 'M&MFIN.NS',
-       'BHARATFORG.NS', 'HDFCAMC.NS', 'AMARAJABAT.NS', 'IRCTC.NS',
-       'VOLTAS.NS', 'MPHASIS.NS', 'GSPL.NS', 'MINDTREE.NS', 'PGHH.NS',
-       'JSWSTEEL.NS', 'BAJAJFINSV.NS', 'BERGEPAINT.NS', 'ASHOKLEY.NS',
-       'PEL.NS', 'CASTROLIND.NS', 'APOLLOTYRE.NS', 'INDHOTEL.NS',
-       'INFY.NS', 'ADANIPORTS.NS', 'TATAPOWER.NS', 'BHARTIARTL.NS',
-       'BATAINDIA.NS', 'GAIL.NS', 'SRTRANSFIN.NS', 'BOSCHLTD.NS',
-       'POLYCAB.NS', 'BALKRISIND.NS', 'TECHM.NS', 'TATASTEEL.NS',
-       'WIPRO.NS', 'COROMANDEL.NS', 'ICICIBANK.NS', 'MGL.NS', 'LT.NS',
-       'ACC.NS', 'JINDALSTEL.NS', 'CHOLAFIN.NS', 'POWERGRID.NS',
-       'GODREJPROP.NS', 'ZEEL.NS', 'DLF.NS', 'TITAN.NS', 'AXISBANK.NS',
-       'ESCORTS.NS', 'HINDPETRO.NS', 'SIEMENS.NS', 'GRASIM.NS',
-       'DMART.NS', 'TCS.NS', 'ASIANPAINT.NS', 'EDELWEISS.NS', 'IOC.NS',
-       'BAJAJHLDNG.NS', 'ABCAPITAL.NS', 'JUBLFOOD.NS', 'HAVELLS.NS',
-       'TVSMOTOR.NS', 'ONGC.NS', 'TATACHEM.NS', 'MFSL.NS',
-       'IDFCFIRSTB.NS', 'INDUSTOWER.NS', 'HEROMOTOCO.NS', 'INDIGO.NS',
-       'AUROPHARMA.NS', 'IGL.NS', 'PFC.NS', 'RELIANCE.NS', 'EICHERMOT.NS',
-       'TORNTPOWER.NS', 'JSWENERGY.NS', 'HCLTECH.NS', 'HUDCO.NS',
-       'NMDC.NS', 'MUTHOOTFIN.NS', 'SRF.NS', 'IBULHSGFIN.NS',
-       'DRREDDY.NS', 'INDUSINDBK.NS', 'BEL.NS', 'HINDZINC.NS', 'BPCL.NS',
-       'YESBANK.NS', 'LICHSGFIN.NS', 'AMBUJACEM.NS', 'MARUTI.NS',
-       'MARICO.NS', 'GMRINFRA.NS', 'TATACONSUM.NS', 'IPCALAB.NS',
-       'NTPC.NS', 'RECLTD.NS', 'ICICIPRULI.NS', 'CUB.NS', 'PRESTIGE.NS',
-       'HDFCBANK.NS', 'SBIN.NS', 'OIL.NS', 'NATIONALUM.NS',
-       'CUMMINSIND.NS', 'SANOFI.NS', 'HDFC.NS', 'PIDILITIND.NS',
-       'BANDHANBNK.NS', 'SYNGENE.NS', 'NESTLEIND.NS', 'LALPATHLAB.NS',
-       'ULTRACEMCO.NS', 'ICICIGI.NS', 'FORTIS.NS', 'TRENT.NS',
-       'SBICARD.NS', 'AJANTPHARM.NS', 'APLLTD.NS', 'COALINDIA.NS',
-       'UPL.NS', 'HDFCLIFE.NS', 'BIOCON.NS', 'MRF.NS', 'L&TFH.NS',
-       'ABBOTINDIA.NS', 'GLENMARK.NS', 'DHANI.NS', 'OBEROIRLTY.NS',
-       'ATGL.NS', 'RAJESHEXPO.NS', 'TORNTPHARM.NS', 'BAJAJ-AUTO.NS',
-       'CIPLA.NS', 'AARTIIND.NS', 'LUPIN.NS', 'EMAMILTD.NS',
-       'SUNPHARMA.NS', 'MCDOWELL-N.NS', 'FEDERALBNK.NS', 'BANKINDIA.NS',
-       'ISEC.NS', 'COLPAL.NS', 'LTI.NS', 'NATCOPHARM.NS', 'CADILAHC.NS',
-       'CESC.NS', 'NAM-INDIA.NS', 'ITC.NS', 'PAGEIND.NS', 'PIIND.NS',
-       'APOLLOHOSP.NS', 'GICRE.NS', 'DABUR.NS', 'ENDURANCE.NS',
-       'PFIZER.NS', 'CROMPTON.NS', 'SBILIFE.NS', 'SUNTV.NS', 'UBL.NS',
-       'PETRONET.NS', 'BAJFINANCE.NS', 'NAVINFLUOR.NS', 'LTTS.NS',
-       'DIVISLAB.NS', 'RBLBANK.NS', 'BANKBARODA.NS', 'FRETAIL.NS',
-       'VBL.NS', 'GODREJIND.NS', 'KOTAKBANK.NS', 'ALKEM.NS',
-       'HINDUNILVR.NS', 'ABFRL.NS', 'OFSS.NS', 'BBTC.NS', 'CANBK.NS',
-       'ADANIGREEN.NS', 'BRITANNIA.NS', 'GODREJAGRO.NS', 'WHIRLPOOL.NS',
-       'GODREJCP.NS', 'MANAPPURAM.NS', 'UNIONBANK.NS', 'IDEA.NS',
-       'VGUARD.NS', 'PNB.NS', 'BHEL.NS']
-tickers = ['PNB.NS']
+# tickers = ['PNB.NS']
 
 def main():
+    p_l = []
+    para = get_para()
     n = 50
-
-    tickers = ['PNB.NS']
+    tickers = ['AXISBANK.NS', 'BAJAJFINSV.NS', 'BAJFINANCE.NS', 'COALINDIA.NS',
+       'DRREDDY.NS', 'GRASIM.NS', 'HCLTECH.NS', 'HDFC.NS', 'HDFCBANK.NS',
+       'HEROMOTOCO.NS', 'HINDALCO.NS', 'ICICIBANK.NS', 'INDUSINDBK.NS',
+       'IOC.NS', 'KOTAKBANK.NS', 'LT.NS', 'M&M.NS', 'MARUTI.NS', 'ONGC.NS',
+       'POWERGRID.NS', 'SBIN.NS', 'TATAMOTORS.NS', 'TATASTEEL.NS', 'UPL.NS',
+       'WIPRO.NS']
+    # tickers = ['PNB.NS']
     # ticker = tickers[0]
     # tickers to track - recommended to use max movers from previous day
     capital = 3000  # position size
@@ -149,8 +145,8 @@ def main():
     for ticker in tickers:
         st_dir[ticker] = ["None"]
         print("starting passthrough for.....",ticker)
-        ohlc = get_intra_data(ticker,50)
-        ohlc["st1"] = supertrend(ohlc, 5, 4)
+        ohlc = get_intra_data(ticker)
+        ohlc["st1"] = supertrend(ohlc, para.loc[ticker,'p'], para.loc[ticker,'q'])
         # ohlc["st1"] = supertrend(ohlc, p, m)
         # ohlc["st2"] = supertrend(ohlc, q, n)
         # ohlc["st3"] = supertrend(ohlc, r, o)
@@ -178,43 +174,45 @@ def main():
                 if st_dir[ticker] == ["green"]:
                     pos = 1
                     bp = today.loc[e, "Close"]
-                    print(f"Buying at : {bp}  time : {e}")
+                    # print(f"Buying at : {bp}  time : {e}")
                     continue
                 if st_dir[ticker] == ["red"]:
                     pos = -1
                     sp = today.loc[e, "Close"]
-                    print(f"Selling at : {sp}  time : {e}")
+                    # print(f"Selling at : {sp}  time : {e}")
                     continue
             if pos == 1 and st_dir[ticker] == ["red"] and e.time() != dt.datetime(2020, 2, 5, 15,15).time():
                 sp = today.loc[e, "Close"]
                 pos = -1
                 pc = (sp / bp - 1) * 100
-                print(f"Selling at : {sp}  time : {e} and pc : {pc}")
+                # print(f"Selling at : {sp}  time : {e} and pc : {pc}")
                 percentchange.append(pc)
                 continue
             if pos == -1 and st_dir[ticker] == ["green"] and e.time() != dt.datetime(2020, 2, 5, 15,15).time():
                 bp = today.loc[e, "Close"]
                 pos = 1
                 pc = (1 - (bp / sp)) * 100
-                print(f"Buying at : {bp}  time : {e} and pc : {pc}")
+                # print(f"Buying at : {bp}  time : {e} and pc : {pc}")
                 percentchange.append(pc)
                 continue
             if pos == 1 and e.time() == dt.datetime(2020, 2, 5, 15, 15).time():
                 pos = 0
                 sp = today.loc[e, "Open"]
                 pc = (sp / bp - 1) * 100
-                print(f"**Selling at : {sp}  time : {e} and pc : {pc}")
+                # print(f"**Selling at : {sp}  time : {e} and pc : {pc}")
                 percentchange.append(pc)
                 continue
             elif pos == -1 and e.time() == dt.datetime(2020, 2, 5, 15, 15).time():
                 pos = 0
                 bp = today.loc[e, "Open"]
                 pc = (1 - (bp / sp)) * 100
-                print(f"***Buying at : {bp}  time : {e} and pc : {pc}")
+                # print(f"***Buying at : {bp}  time : {e} and pc : {pc}")
                 percentchange.append(pc)
                 continue
 
-        print(np.array(percentchange).cumsum()[-1])
-        plt.plot(np.array(percentchange).cumsum())
+        print(f"{ticker} : {np.array(percentchange).cumsum()[-1]}%")
+        p_l.append(np.array(percentchange).cumsum()[-1])
+        # plt.plot(np.array(percentchange).cumsum())
 st_dir = {}
 main()
+
